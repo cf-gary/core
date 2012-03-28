@@ -70,11 +70,12 @@ static TopicAssociation *AssociationExists(TopicAssociation *list, char *fwd, ch
 static Occurrence *OccurrenceExists(Occurrence *list, char *locator, enum representations repy_type, char *s);
 static void KeepPromiseBundles(void);
 int GetTopicPid(char *classified_topic);
-
+void ShowTopicsWithoutOccurrences();
+static Occurrence *HasOccurrence(Occurrence **list, char *context);
 /*******************************************************************/
 /* GLOBAL VARIABLES                                                */
 /*******************************************************************/
-
+int SHOW_TOPICS_WO_OCCURRENCES = false;
 static Topic *TOPICHASH[CF_HASHTABLESIZE];
 
 int GLOBAL_ID = 1;              // Used as a primary key for convenience, 0 reserved
@@ -147,6 +148,7 @@ static const struct option OPTIONS[] =
     {"updatetest", no_argument, 0, 'u'},
     {"xml", no_argument, 0, 'x'},
     {"output-file", required_argument, 0, 'o'},
+    {"topics-wo-occurrences", required_argument, 0, 'w'},
     {NULL, 0, 0, '\0'}
 };
 
@@ -169,8 +171,10 @@ static const char *HINTS[] =
     "Update test data",
     "Generate documentation in XML format",
     "Output file for XML documentation",
+    "Show topics without occurrences",
     NULL
 };
+
 
 /*****************************************************************************/
 
@@ -222,7 +226,11 @@ int main(int argc, char *argv[])
         WriteKMDB();
         GenerateManual();
         ShowWords();
-        ShowSingletons();
+//        ShowSingletons();
+        if(SHOW_TOPICS_WO_OCCURRENCES)
+        {
+        ShowTopicsWithoutOccurrences();
+        }
 
         complete = (double) CF_TOPICS *(CF_TOPICS - 1);
 
@@ -248,7 +256,7 @@ static GenericAgentConfig CheckOpts(int argc, char **argv)
 
     LOOKUP = false;
 
-    while ((c = getopt_long(argc, argv, "Ihbd:vVf:mxMz:St:ruT", OPTIONS, &optindex)) != EOF)
+    while ((c = getopt_long(argc, argv, "Ihbd:vVf:mxMz:St:ruTw", OPTIONS, &optindex)) != EOF)
     {
         switch ((char) c)
         {
@@ -341,7 +349,9 @@ static GenericAgentConfig CheckOpts(int argc, char **argv)
         case 'T':
             WORDS = true;
             break;
-
+            case 'w':
+                SHOW_TOPICS_WO_OCCURRENCES = true;
+                break;
         default:
             Syntax("cf-know - knowledge agent", OPTIONS, HINTS, ID);
             exit(1);
@@ -752,6 +762,50 @@ void ShowSingletons()
                    ip->name);
         }
     }
+}
+
+void ShowTopicsWithoutOccurrences()
+{
+    Topic *tp;
+    Occurrence *op = NULL;
+    Item *ip, *list = NULL;
+    int slot;
+    char id[CF_BUFSIZE];
+
+        for (slot = 0; slot < CF_HASHTABLESIZE; slot++)
+        {
+            for (tp = TOPICHASH[slot]; tp != NULL; tp = tp->next)
+            {
+		snprintf(id, CF_MAXVARSIZE, "%s", CanonifyName(tp->topic_name));
+                if ((op = HasOccurrence(&OCCURRENCES, id)) == NULL)
+                {
+                    PrependItem(&list, tp->topic_name, tp->topic_context);
+                }
+            }
+        }
+
+        list = SortItemListNames(list);
+
+        for (ip = list; ip != NULL; ip = ip->next)
+        {
+            printf(" ! Warning, topic \"%s::%s\" has no occurrences\n", ip->classes, ip->name);
+        }
+    
+}
+
+static Occurrence *HasOccurrence(Occurrence **list, char *context)
+{
+    Occurrence *op;
+
+    for (op = *list; op != NULL; op = op->next)
+    {
+        if (strcmp(op->occurrence_context, context) == 0)
+        {
+            return op;
+        }
+    }
+
+    return NULL;
 }
 
 /*********************************************************************/
