@@ -1,0 +1,172 @@
+\input texinfo-altfont
+\input texinfo-logo
+\input texinfo
+@selectaltfont{cmbright}
+@setlogo{CFEngineFrontPage}
+@c *********************************************************************
+@c
+@c  This is a TEXINFO file. It generates both TEX documentation and
+@c  the "on line" documentation "info" files.
+@c
+@c  The file is structured like a programming language. Each chapter
+@c  starts with a chapter comment.
+@c
+@c  Menus list the subsections so that an online info-reader can parse
+@c  the file hierarchically.
+@c
+@c ***********************************************************************@c 
+@c %** start of header
+@setfilename cf3-gettingstarted.info
+@settitle CFEngine 3 Getting Started
+@setchapternewpage odd
+@c %** end of header
+@titlepage
+@title CFEngine 3 Getting Started
+@subtitle CFEngine Training Documentation
+@subtitle Updated 23. January 2013 @c also update in ifnottex section below
+@author CFEngine AS
+@c @smallbook
+@fonttextsize 10
+@page
+@vskip 0pt plus 1filll
+Copyright @copyright{} 2013 CFEngine AS.
+The features described herein are in provided for user convenience and imply no warranty whatsoever
+to the extent of applicable law.
+@end titlepage
+@c *************************** File begins here ************************
+@ifinfo
+@dircategory CFEngine Training
+@direntry
+* CFEngine Reference:
+                        CFEngine is a language based framework
+                        designed for configuring and maintaining
+                        Unix-like operating systems attached
+                        to a TCP/IP network.
+@end direntry
+@end ifinfo
+@ifnottex
+Updated 23. January 2013
+@node Top, Introduction, (dir), (dir)
+@top CFEngine 3 Getting Started
+@end ifnottex
+@ifhtml
+@html
+<a href="#Contents"><h1>COMPLETE TABLE OF CONTENTS</h1></a>
+<h2>Summary of contents</h2>
+@contents
+@end html
+@end ifhtml
+
+@iftex
+@contents
+@end iftex
+
+
+
+@menu
+* Introduction::                
+* Brief Concepts - Architecture::                
+* Appendix Placeholder::      
+@end menu
+
+@c *****************************************************
+@c * CHAPTER
+@c *****************************************************
+@node  Introduction
+@chapter Introduction
+
+Welcome to CFEngine 3, the next generation of enterprise configuration management software! This document will take you through the necessary steps to get up and running with CFEngine 3. The following links will take you to commonly used sections, see above for a complete table of contents:
+
+
+@itemize -
+@c @item @ref{Requirements}
+@item Brief Concepts - Architecture
+@item Set Up the Working Environment
+@item Using the Design Center
+@item CFEngine on AWS
+@item CFEngine in the Cloud
+@item CFEngine DSL - Example for Deploying a Lamp Stack
+@item The Mission Portal - Reporting and Compliance
+@end itemize
+
+CFEngine 3 Free Enterprise is our commercial enterprise product offered for free for up to 25 managed hosts. It differs from our commercial offer in that it has different licensing terms, different support and it is limited to a maximum of 25 hosts. This product is described in full detail at @url{http://cfengine.com/25free}. Please note that CFEngine 3 Enterprise should not be installed as an upgrade to CFEngine Community. In that case uninstall CEngine Community, do a clean install of CFEngine 3 Enterprise and then move your existing policies to the new Enterprise hub. See the @url{http://cfengine.com/enterprise/faq, Enterprise FAQ} for more information.
+
+@menu
+* About CFEngine 3 Enterprise::  
+@end menu
+
+
+@c ----------------------------------------------------
+@node About CFEngine 3 Enterprise
+@section About CFEngine 3 Enterprise
+
+CFEngine 3 Enterprise is a commercially licensed version of the core CFEngine
+software@footnote{Major version 3} with enterprise library extensions. All of
+the documentation for CFEngine 3 applies to CFEngine 3 Enterprise. 
+
+The aim of CFEngine 3 Enterprise is to offer a knowledge-enhanced framework for configuration management that goes beyond mere technical configuration to support the needs of businesses. Features include compliance management, reporting and business integration, and tools for handling necessary complexity. CFEngine 3 Enterprise has features to support Cloud Computing for public and private clouds, as well as greater integration facilities with database resources.
+
+
+@c *****************************************************
+@c * CHAPTER
+@c *****************************************************
+@node Brief Concepts - Architecture
+@chapter Brief Concepts - Architecture
+
+@menu
+* Architecture::       
+@end menu
+
+@node Architecture
+@section Architecture
+
+@sp 1
+@center @image{img-architecture,10cm,,CFEngine Architecture}
+@center Figure: CFEngine Architecture
+@sp 1
+
+
+@c *****************************************************
+@c * APPENDIX A
+@c *****************************************************
+@node Appendix Placeholder
+@appendix Appendix Placeholder
+
+Some text here
+
+@cartouche
+Please note that any queries containing the PromiseDefinitions table in combination with any other table in the schema will produce erroneous output without an intermediate join to the PromiseStatusLast table.
+@end cartouche
+
+
+@c =========================================================================
+@c @node Index,  , CFEngine Methods, Top
+@c @unnumbered Concept Index
+@c @printindex cp
+@c =========================================================================
+@ifhtml
+@html
+<a name="Contents">
+@contents
+@end html
+@end ifhtml
+
+@c  The file is structured like a programming language. Each chapter
+@c  starts with a chapter comment.
+@c
+@c  Menus list the subsections so that an online info-reader can parse
+@c  the file hierarchically.
+@ifhtml
+@html
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+var pageTracker = _gat._getTracker("UA-2576171-2");
+pageTracker._initData();
+pageTracker._trackPageview();
+</script>
+@end html
+@end ifhtml
+@bye
