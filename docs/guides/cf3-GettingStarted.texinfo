@@ -51,8 +51,8 @@ Updated 23. January 2013
 @end ifnottex
 @ifhtml
 @html
-<a href="#Contents"><h1>COMPLETE TABLE OF CONTENTS</h1></a>
-<h2>Summary of contents</h2>
+@c <a href="#Contents"><h1>COMPLETE TABLE OF CONTENTS</h1></a>
+@c <h2>Summary of contents</h2>
 @contents
 @end html
 @end ifhtml
@@ -65,8 +65,11 @@ Updated 23. January 2013
 
 @menu
 * Introduction::                
-* Brief Concepts - Architecture::                
-* Appendix Placeholder::      
+* Brief Concepts - Architecture::               
+* Set Up a Working Environment:: 
+* Using the Design Center::
+* Introduction to CFEngine Syntax::
+* CFEngine 3 Community Installation::      
 @end menu
 
 @c *****************************************************
@@ -75,13 +78,16 @@ Updated 23. January 2013
 @node  Introduction
 @chapter Introduction
 
-Welcome to CFEngine 3, the next generation of enterprise configuration management software! This document will take you through the necessary steps to get up and running with CFEngine 3. The following links will take you to commonly used sections, see above for a complete table of contents:
+Welcome to CFEngine 3, the next generation of configuration management software! CFEngine is a tool designed to help you configure and automate your IT infrastructure. It can expertly handle any number of tasks, ranging from the standardization of server builds to the deployment and management of software and services. In terms of real time administration, CFEngine has the ability to maintain system security from both a file system and process perspective and report on environmental health and status.
 
+This document will take you through the necessary steps to get up and running with CFEngine 3. We will use CFEngine 3 Free Enterprise, our enterprise product offered for free for up to 25 managed hosts, to demonstrate basic usage (@url{http://cfengine.com/25free, get it here!)}. All policy examples in this document are also valid for our open source offering, CFEngine 3 Community. The Mission Portal, CFEngine Enterprise's graphical user interface, is only available in the enterprise product.
+
+@noindent The following links will take you to commonly used sections, see above for a complete table of contents:
 
 @itemize -
 @c @item @ref{Requirements}
 @item Brief Concepts - Architecture
-@item Set Up the Working Environment
+@item Set Up a Working Environment
 @item Using the Design Center
 @item CFEngine on AWS
 @item CFEngine in the Cloud
@@ -90,21 +96,6 @@ Welcome to CFEngine 3, the next generation of enterprise configuration managemen
 @end itemize
 
 CFEngine 3 Free Enterprise is our commercial enterprise product offered for free for up to 25 managed hosts. It differs from our commercial offer in that it has different licensing terms, different support and it is limited to a maximum of 25 hosts. This product is described in full detail at @url{http://cfengine.com/25free}. Please note that CFEngine 3 Enterprise should not be installed as an upgrade to CFEngine Community. In that case uninstall CEngine Community, do a clean install of CFEngine 3 Enterprise and then move your existing policies to the new Enterprise hub. See the @url{http://cfengine.com/enterprise/faq, Enterprise FAQ} for more information.
-
-@menu
-* About CFEngine 3 Enterprise::  
-@end menu
-
-
-@c ----------------------------------------------------
-@node About CFEngine 3 Enterprise
-@section About CFEngine 3 Enterprise
-
-CFEngine 3 Enterprise is a commercially licensed version of the core CFEngine
-software@footnote{Major version 3} with enterprise library extensions. All of
-the documentation for CFEngine 3 applies to CFEngine 3 Enterprise. 
-
-The aim of CFEngine 3 Enterprise is to offer a knowledge-enhanced framework for configuration management that goes beyond mere technical configuration to support the needs of businesses. Features include compliance management, reporting and business integration, and tools for handling necessary complexity. CFEngine 3 Enterprise has features to support Cloud Computing for public and private clouds, as well as greater integration facilities with database resources.
 
 
 @c *****************************************************
@@ -115,28 +106,688 @@ The aim of CFEngine 3 Enterprise is to offer a knowledge-enhanced framework for 
 
 @menu
 * Architecture::       
+* Policy Files::
+* Pull Model::
 @end menu
 
 @node Architecture
 @section Architecture
 
+CFEngine is a distributed solution that is completely independent of host operating systems, network topology or system processes. You describe the ideal state of a given system by creating promises and the CFEngine agent ensures that the necessary steps are taken to achieve this state. @c Automation in CFEngine is executed through a series of components that run locally on managed systems. 
+
+Once CFEngine is installed on a system, it can function as either a standalone client or as a part of a multi-node infrastructure. Clients are designed to pull policies from a hub, or policy server. If a system is dedicated as a CFEngine hub, it is still a client that will maintain it's own state regardless of it's function to the rest of CFEngine infrastructure. In addition, a client can assume various roles in any given infrastructure; be it a version control repository, distribution server or end host. 
+
+CFEngine is based on Promise Theory, a model of voluntary cooperation between individual, autonomous actors or agents who publish their intentions to one another in the form of promises. One important consequence of this is that CFEngine uses a @i{pull} rather than a @i{push} model for communication and distribution of files. In a @i{push} model the clients have no choice but to accept whatever the server sends them and live with the consequences. In a @i{pull} model, on the other hand, the clients decide what they want to accept, nothing can be forced on them. CFEngine simulates a push model by asking the clients to run their policy, which then contains a promise to check for updates of specific files. Read more here: @b{some url}.
+
+The below schema shows the policy flow in a typical CFEngine installation: 
+
 @sp 1
-@center @image{img-architecture,10cm,,CFEngine Architecture}
+@center @image{img-policy_flow_simplified,12cm,,CFEngine Architecture}
 @center Figure: CFEngine Architecture
 @sp 1
+
+On the hub, a separate directory (@file{/var/cfengine/masterfiles/}) serves as the policy repository. All clients connected to the hub (including the hub itself) will pull policy from this location if there has been a change, and place them in a local cached repository (@file{/var/cfengine/inputs/}). This is where policies are executed from on each individual client. If for some reason the clients were unable to pull a new policy from the hub @file{/var/cfengine/masterfiles/} repository they will continue to execute what they have in @file{/var/cfengine/inputs/}.
+
+In the diagram you also see something called @b{Design Center}. This is a public repository for customizable CFEngine design patterns and code, where you can download finished solutions to use and adapt them for your environment. The CFEngine Design Center is a place for infrastructure engineers to share and re-use knowledge and expertise. It is currently a separate CFEngine entity (i.e. not included in the packages) freely available on GitHub. Read more about the Design Center and download it from @url{https://github.com/cfengine/design-center/wiki}.
+
+
+@c ----------------------------------------------------
+@node Policy Files
+@section Policy Files
+
+In the previous section we got to know two important directories for CFEngine functionality:@footnote{The CFEngine application is fully contained within the '/var/cfengine' directory tree. For CFEngine 3 Enterprise, files will also be placed in the operating system specific web document root (for instance in '/var/www/' on Debian/Ubuntu) to make the Mission Portal available. There are a number of other directories under '/var/cfengine', but it is beyond the scope of this tutorial to go into all of these.}
+
+@itemize
+@item @file{/var/cfengine/masterfiles} - The policy repository
+@item @file{/var/cfengine/inputs} - The clients' cache of the policy repository
+@end itemize
+
+The main policy file is @file{/var/cfengine/masterfiles/promises.cf}. On a fresh install, this file calls all the promises that CFEngine needs to maintain itself. This is where you would add or include your own policies as you develop them.
+
+
+promises.cf
+cf_sketch_runfile.cf
+
+
+@c ----------------------------------------------------
+@node Pull Model
+@section Pull Model
+
+We pull everything, from policy to hamstrings!
+
+
+@c *****************************************************
+@c * CHAPTER
+@c *****************************************************
+@node Set Up a Working Environment
+@chapter Set Up a Working Environment
+
+@menu
+* Prerequisites::       
+* Set Up Your Environment::
+* Install CFEngine::
+* Deploy Your Policy::
+@end menu
+
+
+@c ----------------------------------------------------
+@node Prerequisites
+@section Prerequisites
+
+This guide assumes that you have VirtualBox installed on your machine. If you do not already have VirtualBox, get it here: @url{https://www.virtualbox.org}
+
+All the material needed for this tutorial can be found at the following links:
+@table @i
+@item Links:
+<Links to VirtualBox machine images for CentOS and Ubuntu 12.04>@*
+( <Links to KVM machine images for CentOS and Ubuntu 12.04> ?)@*
+<Links to Amazon Machine Images (AMI)>
+<Link to xxxx.tar.gz>
+@item Contents of xxxx.tar.gz:
+CFEngine hub packages
+CFEngine client packages
+Policy files used in this tutorial (except Design Center sketches, which will be available through the cf-sketch interface)
+@end table
+
+Right-click the links and save the targets for VirtualBox images and the xxxx.tar.gz file to a temporary directory (we will use the /tmp directory in the below examples).
+
+To unpack xxxx.tar.gz:
+
+@verbatim
+ # cp xxxx.tar.gz /tmp
+ # tar -xzf /tmp/xxxx.tar.gz
+@end verbatim
+
+The files will be unpacked in @file{/tmp/xxxx}.
+
+
+@c ----------------------------------------------------
+@node Set Up Your Environment
+@section Set Up Your Environment
+
+If you are working in a Linux environment you may have to disable the KVM module to run VirtualBox (you cannot have KVM and VirtualBox running at the same time, please close any open KVM instances that you may have). To disable the KVM module:
+
+@code{ # sudo modprobe -r kvm_intel}
+
+Now you are ready to start VirtualBox (please do so). This is the VirtualBox 4.2 Manager window on Ubuntu 10.04:
+
+<put image here>
+
+To set up your environment you will need to import the provided images to VirtualBox. Locate the following file in your file browser and double click to import:
+
+@itemize -
+@item /tmp/centos63.ova
+@end itemize
+
+A VirtualBox import pop-up will appear:
+
+@sp 1
+@center @image{img-vb_import_ova,12cm,,VirtualBox import ova}
+@center Figure: VirtualBox import ova
+@sp 1
+
+@noindent The virtual machine should now appear in the VirtualBox Manager.
+
+@noindent Repeat the above procedure for Ubuntu 12.04.
+
+Once that is done, please start both VMs by selecting each of them and pressing the 'Start' symbol in the VirtualBox Manager. One window should appear for each machine. Login credentials are:
+
+@table @i
+@item login:
+root
+@item Password:
+cfengine
+@end table
+
+The CFEngine Enterprise packages are already in place for you, ready to be installed. See @ref{Install CFEngine}.
+
+
+@c ----------------------------------------------------
+@node Install CFEngine
+@section Install CFEngine
+
+@menu
+* Obtain CFEngine Enterprise Binaries::
+* Installation Procedure::
+@end menu
+
+TODO The CFEngine packages come in many different flavors. For Linux systems, CFEngine 3 Free Enterprise is available as a pre-compiled binary for the following distributions: CentOS, RHEL, SLES, Debian and Ubuntu. These packages are available after login from @url{https://cfengine.com/25free/downloads}. For installation of CFEngine 3 Community, please see @xref{CFEngine 3 Community Installation}.
+
+@noindent For a standard setup, you will designate one at least one server as the hub, which should be installed first.
+
+If you are following the Getting Started guide provided on @url{http://cfengine.com/manuals/<link>} you do not need to obtain the CFEngine binaries, they are already present on the packaged virtual machine images.
+
+
+@c ----------------------------------------------------
+@node Obtain CFEngine Enterprise Binaries
+@subsection Obtain CFEngine Enterprise Binaries
+
+CFEngine 3 Enterprise is provided in three packages (two hub and one client package). These are the three packages (inside the respective hub and client listings found under each platform in the software download page, example for 64 bit rpm packages):@footnote{The difference between the two cfengine-nova_<version_number> packages (for hub and client) is that the agent binaries for the hub are linked to the MongoDB library while the binary for clients are not. Installing a client package on the hub will result in a database connection error, the Mission Portal will not be available and reports will not be collected. Installing the hub package on clients will result in error reports stating that the agent failed to connect to MongoDB (because it is not existent in client packages; danger of filling up error logs), but otherwise functionality will be assured.}
+
+@table @i
+@item Hub: 
+@smallexample
+cfengine-nova_<version_number>.x86_64.rpm
+cfengine-nova-expansion_<version_number>.x86_64.rpm
+@end smallexample
+@item Client:
+@smallexample
+cfengine-nova_<version_number>.x86_64.rpm 
+@end smallexample
+@end table
+
+Please take care to install the correct packages on the corresponding hub or client nodes. The expansion package is only installed on the policy hub. You should install and set up the hub first.
+
+
+@c ----------------------------------------------------
+@node Installation Procedure
+@subsection Installation Procedure
+
+To install CFEngine 3 Enterprise on a Hub, unpack the binaries (use hub packages; you must install them as root):
+
+@table @i
+@item RedHat/CentOS   	
+@smallexample
+rpm -ihv cfengine-nova_<version_number>.rpm
+rpm -ihv cfengine-nova-expansion_<version_number>.rpm
+@end smallexample
+@item Debian/Ubuntu
+@smallexample
+dpkg --install  cfengine-nova_<version_number>.deb
+dpkg --install  cfengine-nova-expansion_<version_number>.deb
+@end smallexample
+@end table
+
+@sp 1
+To install CFEngine 3 Enterprise on non-Hub systems (use client package):
+@table @i
+@item RedHat/SuSE
+@smallexample
+rpm -ihv cfengine-nova-<version_number>.rpm 
+@end smallexample
+@item Debian/Ubuntu
+@smallexample
+dpkg --install  cfengine-nova-<version_number>.deb
+@end smallexample
+@end table
+
+@sp 1
+
+@cartouche
+@b{Note to commercial customers} (not applicable to CFEngine 3 Free Enterprise): On the hub, a public key has now been created in @file{/var/cfengine/ppkeys/localhost.pub} as part of the package installation. You should send this public key to CFEngine Support as an attachment in the ticket system, to obtain a license file (@file{license.dat}). Save the returned license file to @file{/var/cfengine/masterfiles/license.dat} on the hub before continuing.
+@end cartouche
+
+For a typical CFEngine installation, you will now need to bootstrap the clients to the hub so they know where to get their policies. Start with bootstrapping the hub to itself:
+
+@enumerate
+@item Find the hostname or IP address of the hub, here we will assume the address is 172.16.100.134
+@item Designate the hub as the policy server by bootstrapping it using its own IP address:
+@sp 1
+@smallexample
+root@@cfhub# /var/cfengine/bin/cf-agent --bootstrap --policy-server 172.16.100.134
+@end smallexample
+@sp 1
+CFEngine will output diagnostic information upon bootstrap. If all is well you should see the following in the output: 
+@sp 1
+@smallexample
+-> Bootstrap to 172.16.100.134 completed successfully
+@end smallexample
+@end enumerate
+
+CFEngine will need a couple of runs to set up everything before the Mission Portal (graphical user interface) is ready to use. It should normally be ready within 10-15 minutes, you can start looking at how to deploy your first policy in the below section.
+
+
+@c ----------------------------------------------------
+@node Deploy Your Policy
+@section Deploy Your Policy
+
+@cartouche
+This example assumes that you have already installed CFEngine and bootstrapped at least one machine to act as a hub (policy server) and one machine to act as a client.
+@end cartouche
+
+@menu
+* Put the Policy in Place::
+* Verify That the Policy Was Deployed::
+@end menu
+
+
+@c ----------------------------------------------------
+@node Put the Policy in Place
+@subsection Put the Policy in Place
+
+In this example we will use the yyy policy in the xxxx zip-file. Let us have a look at the content:
+
+@code{ # vim /tmp/xxxx/yyy.cf}
+
+@verbatim
+Policy that sets firewall on hub to only have port 5308, 80 (for MP)  and 222 open (for ssh)
+ssh config to only accept port 222
+@end verbatim
+
+We will not go into detail of the CFEngine syntax at this point, but merely summarize what this policy file does (try to follow by looking at the syntax as well):
+
+@itemize
+@item List what the policy does in course steps
+@end itemize
+
+In order for this policy to be deployed on all managed nodes, you will need to put it in the @file{/var/cfengine/masterfiles/} directory on the hub:
+
+@verbatim 
+   # cp /tmp/yyy.cf /var/cfengine/masterfiles
+@end verbatim
+
+Once that is done, you will also need to include it in the main policy file, @file{promises.cf}:
+
+@code{ # vim /var/cfengine/masterfiles/promises.cf}
+
+@verbatim
+###############################################################################
+#
+#   promises.cf - Basic Policy for Enterprise version
+#
+###############################################################################
+
+body common control
+
+{
+
+ bundlesequence => {
+
+                  # Common bundle first (Best Practice)
+                    "def",
+                    "cfe_internal_hub_vars",
+                  # Design Center
+                    "cfsketch_run",
+
+                  # Agent bundle
+                    "cfe_internal_management",   # See cfe_internal/CFE_cfengine.cf
+                    "service_catalogue",
+                    "example_use_goals",         # See cfe_internal/example_use_goals.cf
+
+                   };
+
+         inputs => {
+
+                  # File definition for global variables and classes
+                    "def.cf",
+
+                  # Design Center
+                  # MARKER FOR CF-SKETCH INPUT INSERTION
+                    "cf-sketch-runfile.cf",
+
+                  # CFEngine internal processes for Mission Portal mostly
+                    "cfe_internal/CFE_cfengine.cf",
+                    "cfe_internal/CFE_hub_specific.cf",
+                    "cfe_internal/CFE_knowledge.cf",
+                    "cfe_internal/example_use_goals.cf",
+
+etc.
+
+@end verbatim
+
+We did not list the entire policy in the above verbatim section, but only the parts that are relevant to this exercise:
+
+@table @i
+@item bundlesequence =>
+Lists the CFEngine bundles (what is a bundle?) in the order they are to be executed
+@item inputs =>
+List the input files that the main policy file, @file{promises.cf}, uses to complete the policy.
+@end table
+
+To include the @file{yyy.cf} policy in your configuration, you must enter the appropriate bundle name in the @i{bundlesequence} and the file name in @i{inputs}, preferably at the bottom of each section:
+
+@noindent @i{In bundlesequence}:
+@verbatim
+  ...
+                  # Agent bundle
+                    "cfe_internal_management",   # See cfe_internal/CFE_cfengine.cf
+                    "service_catalogue",
+                    "example_use_goals",         # See cfe_internal/example_use_goals.cf
+
+                    "yyy",
+                   };
+  ...
+@end verbatim
+
+@noindent @i{In inputs}:
+@verbatim
+  ...
+                  # List of services here
+                    "services/file_change.cf",
+
+                    "yyy.cf",
+                   };
+  ...
+@end verbatim
+
+Save and close @file{yyy.cf}. To make sure that everything is ok you should run a syntax check on your new policy:
+
+@verbatim
+ # /var/cfengine/bin/cf-promises -f /var/cfengine/masterfiles/promises.cf
+@end verbatim
+
+Since you included the @file{yyy.cf} policy in @file{promises.cf} it will automatically be syntax checked as a child of the master policy file. No ouput will be given if all is well. If applicable, please correct any errors according to the error message(s) that you get.
+
+CHECK: HOST_LICENSES_PAID OUTPUT MESSAGE, HOW SHOULD WE DEAL WITH THIS?
+
+
+@c ----------------------------------------------------
+@node Verify That the Policy Was Deployed
+@subsection Verify That the Policy Was Deployed
+
+Remember that CFEngine by default runs every 5 minutes, meaning that it may take up to 5 minutes before your policy is deployed. There are several ways of veryfying the final result:
+
+@table @i
+@item Check that the content of @file{/var/cfengine/inputs} is the same on the clients as on the hub
+The content of @file{promises.cf} should be the same on all clients.@*
+The new policy file @file{yyy.cf} should be in @file{/var/cfengine/inputs}.
+@item Use the Mission Portal to observe that the policy changes have taken effect
+@item Use the command line interface to observe that the policy changes have taken effect
+@end table
+
+
+@c *****************************************************
+@c * CHAPTER
+@c *****************************************************
+@node Using the Design Center
+@chapter Using the Design Center
+
+@menu
+* Basic Functionality::
+* Install - Configure - Deploy a Sketch::
+@end menu
+
+The following instructions show how to clone the Design Center GitHub repository to your machine. The result of this is that the sketch repository will be stored on your machine, you could optionally install the bare basics and use GitHub as a sketch repository. With this solution you can use all sketches without a working network connection, but you will have to update the repository yourself on a regular basis (or use CFEngine to do so!) to get the latest updates. Please see @url{https://www.github.com/cfengine/design-center/wiki,GitHub} for other options on how to install the Design Center.
+
+@code{# git clone shit}
+
+@code{# cd design-center/tools/cf-sketch}
+
+@code{# make install}
+
+The CFEngine Design Center should now be installed on your system, please see @ref{Basic Functionality} for introductory commands to the Design Center's main tool and interface: @code{cf-sketch}.
+
+
+@c ----------------------------------------------------
+@node Basic Functionality
+@section Basic Functionality
+
+Once @code{cf-sketch} is installed you can launch @code{cf-sketch} by typing:
+
+@verbatim
+  # ./design-center/tools/cf-sketch/cf-sketch.pl
+@end verbatim
+
+Type @code{help} to see available commands:
+
+@code{cf-sketch> help}
+
+@verbatim
+The current commands are: ([]'s denote optional, caps need values)
+configure SKETCH[#n] [FILE.json]
+                              Configure the given sketch using the parameters
+                              from FILE.json or interactively if the file is
+                              ommitted. If #n is specified, the indicated
+                              instance is edited instead of creating a new one.
+deploy                        Install the currently-activated sketches for
+                              automatic execution from promises.cf
+info [-v] REGEX | all         Show detailed information about sketches that
+                              match the regular expression, use "all" to show
+                              all the sketches. Use -v to show even more
+                              details (parameter information).
+install SKETCH ...            Install or update the given sketches
+list [-v] [REGEX|all]         List installed sketches and their configuration
+                              status. Specify REGEX to filter, no argument or
+                              "all" to list everything, use -v to show full
+                              configuration details.
+remove sketch SKETCH ...      Uninstall the given sketches. All their
+                              configurations are also removed.
+remove config SKETCH | SKETCH#NUM ...
+                              Remove the given configurations. If only the
+                              sketch name is specified, all its configurations
+                              are removed. If a number is specified, only that
+                              configuration instance is removed (numbers are as
+                              reported by "list -v").
+run [ARGUMENTS]               Execute the currently-activated sketches
+                              immediately using cf-agent. If any arguments are
+                              given, they are passed as-is to cf-agent.
+                              Remember to use -K if you want all promises to be
+                              evaluated (i.e. when testing in quick sequence).)
+search [REGEX | all]          Search sketch repository, use "all" to list
+                              everything.
+
+help [COMMAND ...]            Print this command summary, or help about the
+                              specific commands requested.
+quit, exit or ^D              Exit the program.
+version                       Print version information.
+@end verbatim
+
+The CFEngine::stdlib is installed by default, as can be seen by the @code{list} command:
+
+@code{   cf-sketch> list}
+
+@verbatim
+   The following sketches are installed:
+
+   1. CFEngine::stdlib (library)
+@end verbatim
+
+Let us search for available sketches (and choose one to install, configure and deploy in the following section):
+
+@code{cf-sketch> search}
+@verbatim
+The following sketches are available:
+
+CFEngine::sketch_template Standard template for Design Center sketches
+CFEngine::stdlib CFEngine standard library (also known as COPBL)
+Cloud::Services Manage EC2 and VMware instances
+Database::Install Install and enable the MySQL, Postgres or SQLite database engines
+Library::Hardware::Info Discover hardware information
+Monitoring::Snmp::hp_snmp_agents Install and optionally configure hp-snmp-agents
+Monitoring::nagios_plugin_agent Run Nagios plugins and optionally take action
+Packages::CPAN::cpanm Install CPAN packages through App::cpanminus
+Repository::Yum::Client Manage yum repo client configs in /etc/yum.repos.d
+Repository::Yum::Maintain Create and keep Yum repository metadata up to date
+Repository::apt::Maintain Manage deb repositories in /etc/apt/sources.list.d/ files or /etc/apt/sources.list
+Security::SSH Configure and enable sshd
+Security::file_integrity File hashes will be generated at intervals specified by ifelapsed. On modification, you can update the hashes automatically. In either case, a local report will be generated and transferred to the CFEngine hub (CFEngine Enterprise only). Note that scanning the files requires a lot of disk and CPU cycles, so you should be careful when selecting the amount of files to check and the interval at which it happens (ifelapsed).
+Security::security_limits Configure /etc/security/limits.conf
+Security::tcpwrappers Manage /etc/hosts.{allow,deny}
+System::config_resolver Configure DNS resolver
+System::cron Manage crontab and /etc/cron.d contents
+System::etc_hosts Manage /etc/hosts
+System::set_hostname Configure system hostname
+System::sysctl Manage sysctl values
+System::tzconfig Manage system timezone configuration
+Utilities::abortclasses Abort execution if a certain file exists, aka 'Cowboy mode'
+Utilities::ipverify Execute a bundle if reachable ip has known MAC address
+Utilities::ping_report Report on pingability of hosts
+VCS::vcs_mirror Check out and update a VCS repository.
+WebApps::wordpress_install Install and configure Wordpress
+Webserver::Install Install and configure a webserver, e.g. Apache
+Yale::stdlib Yale standard library
+@end verbatim
+
+
+
+
+@c ----------------------------------------------------
+@node Install - Configure - Deploy a Sketch
+@section Install - Configure - Deploy a Sketch
+
+We saw in the previous section that you can list all available sketches by the @code{search} command in the cf-sketch command line utility.
+
+We will now install the @code{Security::SSH} sketch:
+
+@code{cf-sketch> install Security::SSH}
+
+@verbatim
+
+Installing Security::SSH
+Checking and installing sketch files.
+Done installing Security::SSH
+@end verbatim
+
+We will configure and activate the sketch by means of the interactive @code{cf-sketch} interface:
+
+@code{cf-sketch> configure Security::SSH}
+
+@verbatim
+Entering interactive configuration for sketch Security::SSH.
+Please enter the requested parameters (enter STOP to abort):
+
+Parameter 'params' must be an array.
+Please enter each key and value in turn, empty key to finish.
+Please enter next key: 
+@end verbatim
+
+This parameter pertains to which keys the sketch should be valid for? We want it to be general, so press enter for any key. The following step requests input to the parameter by which the sketch should be activated (i.e. in what context (when and where) the sketch will be adapted). Please enter @code{!am_policy_hub}:
+
+@verbatim
+Parameter 'activated' must be a CONTEXT.
+Please enter activated [any]: !am_policy_hub
+Configured: Security::SSH #1
+
+cf-sketch> 
+@end verbatim
+
+The sketch has now been configured and activated for the appropriate context; this means it is ready to deploy! We would like to include the sketch in the general policy framework (i.e. include it in @file{promises.cf}, so we will use the @code{deploy} command (NOTE: this will deploy all activated @footnote{Use the 'run' command to run independent of 'promises.cf'.}
+
+@code{cf-sketch> deploy}
+
+@verbatim
+Generated non-standalone run file /var/cfengine/masterfiles/cf-sketch-runfile.cf
+This runfile will be automatically executed from promises.cf
+@end verbatim
+
+That's it, now you only have to wait while the sketch is distributed throughout your system. As CFEngine runs every five minutes by default, it may take a couple of minutes before the sketch is distributed to all clients.
+
+In the mean time we can have a look at how we can verify the results of the sketch through the Mission Portal.
+
+
+@c *****************************************************
+@c * CHAPTER
+@c *****************************************************
+@node Introduction to CFEngine Syntax
+@chapter Introduction to CFEngine Syntax
+
+We already threw a brief look at a CFEngine policy in @ref{Deploy Your Policy}, now it is time to get your hands dirty with some real CFEngine syntax concepts! To re-iterate, the start of @file{/var/cfengine/masterfiles/promises.cf} had the following content:
+
+@itemize -
+@item A @code{bundlesequence} attribute defining the order in which bundles are to be executed
+@item An @code{inputs} attribute defining the input files to be used by @file{promises.cf}
+@end itemize
+
+An @i{attribute} is a single property of a promise, i.e. how the promise implements what it is supposed to do. Both of these items are contained in:
+
+@verbatim
+   body common control
+@end verbatim
+
+Containment means they are located within the opening curly bracket '@{' and closing curly bracket '@}' of @code{body common control}. A @i{body} is thus a container for promise @i{attributes}. The @i{body} statement consists of two additional elements:
+
+@table @i
+@item common
+This is the body type. Types vary according to which components are supposed to execute them, @code{common} means that the @i{body} is valid for all components.
+@item control
+This is the name of the body, and in this case, a reserved keyword in CFEngine. The name @i{control} means that the @i{body} controls the behavior of the CFEngine components. Other @i{body} statement third elements have arbitrary names defined by the user, usually an easily identifiable name that says something about what the body does.
+@end table
+
+Looking further down in @file{/var/cfengine/masterfiles/promises.cf}, we find:
+
+@verbatim
+###############################################################################
+#
+# bundle agent service_catalogue
+#  - general purposes of usage
+#
+###############################################################################
+
+bundle agent service_catalogue
+
+{
+
+ methods:
+
+  any::
+
+   "security" -> { goal_infosec, goal_compliance }
+                  comment => "Basic change management",
+                   handle => "service_catalogue_change_management",
+                usebundle => change_management;
+
+}
+@end verbatim
+
+Please note the line stating:
+
+@verbatim
+bundle agent service_catalogue
+@end verbatim
+
+A @i{bundle} is a container for promises. In similar fashion to @i{body} statements, the @i{bundle} statement consists of two additional elements:
+
+@table @i
+@item agent
+This is the bundle type. Types vary according to which components are supposed to execute them. Here, @code{agent} means that @code{cf-agent} will be responsible for executing this bundle.
+@item service_catalogue
+This is the bundle name, in this case an arbitrary user defined name that usually says something about what the bundle does.
+@end table
+
+Checkpoint:
+@itemize -
+@item @i{body} and @i{bundle} are containers for promise attributes (how promises do what they are supposed to) and promises, respectively.
+@item Both @i{body} and @i{bundle} have types, describing which CFEngine components are responsible for their action (but see also edit_line)
+@item Both @i{body} and @i{bundle} have names. They are either CFEngine keywords or, usually, arbitrary names that describe what the @i{body} or @i{bundle} does.
+@end itemize
+
+Let us move to more interesting examples in the @file{yyy.cf} policy:
+
+@verbatim
+   yyy.cf policy bundle here
+@end verbatim
+
+Classes and variables are most important here.
 
 
 @c *****************************************************
 @c * APPENDIX A
 @c *****************************************************
-@node Appendix Placeholder
-@appendix Appendix Placeholder
+@node CFEngine 3 Community Installation
+@appendix CFEngine 3 Community Installation
 
-Some text here
+The CFEngine packages come in many different flavors. For Linux systems, CFEngine is available as a pre-compiled binary for many distributions, including: Debian, Fedora, RHEL, SuSE and Ubuntu. These packages are available after login from @url{http://cfengine.com/inside/myspace}. To unpack the binaries (you must install them as root):
 
-@cartouche
-Please note that any queries containing the PromiseDefinitions table in combination with any other table in the schema will produce erroneous output without an intermediate join to the PromiseStatusLast table.
-@end cartouche
+Prior to installing CFEngine, you should first ensure that the following packages are installed:
+
+@itemize
+@item OpenSSL - Open source Secure Sockets Layer for encryption.
+@item BerkeleyDB (version 3.2 or later) - Lightweight flat-file database system.
+@item PCRE - Perl Compatible Regular Expression library.
+@end itemize
+
+If they are not installed, then you can easily install them using the appropriate package manager:
+
+@table @i
+@item Debian/Ubuntu:       
+@code{apt-get install libtokyocabinet-dev libpcre3-dev libssl-dev}
+@item CentOS/RedHat:      
+@code{yum install tokyocabinet-devel pcre openssl}
+@item SuSE:                         
+@code{zypper install libtokyocabinet-devel pcre libopenssl}
+@end table
+
+Once the prerequisites are installed or verified, you may proceed to the CFEngine installation. 
+
+@table @i
+@item RedHat/SuSE:   	
+@code{rpm -ihv cfengine-community-3.x.y.rpm}
+@item Debian/Ubuntu:
+@code{dpkg --install  cfengine-community-3.x.y.deb}
+@end table
+
+For other UNIX/Linux systems, you may download and compile the source code, which is available from http://cfengine.com/source_code.  
+
 
 
 @c =========================================================================
@@ -144,12 +795,15 @@ Please note that any queries containing the PromiseDefinitions table in combinat
 @c @unnumbered Concept Index
 @c @printindex cp
 @c =========================================================================
+
+@ignore
 @ifhtml
 @html
 <a name="Contents">
 @contents
 @end html
 @end ifhtml
+@end ignore
 
 @c  The file is structured like a programming language. Each chapter
 @c  starts with a chapter comment.
